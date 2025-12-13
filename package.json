@@ -1,0 +1,19 @@
+{
+  "name": "page-highlight",
+  "version": "1.0.0",
+  "description": "Highlights text segments on the page when you click the icon",
+  "main": "dist/service-worker.bundle.js",
+  "scripts": {
+    "build": "webpack --mode production",
+    "dev": "webpack --mode development --watch"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.32",
+    "clean-webpack-plugin": "^4.0.0",
+    "copy-webpack-plugin": "^11.0.0",
+    "ts-loader": "^9.4.0",
+    "webpack": "^5.88.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^4.15.1"
+  }
+}
