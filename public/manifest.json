@@ -1,9 +1,9 @@
 {
-  "name": "Page Redder",
+  "name": "Page Highlight",
   "action": {},
   "manifest_version": 3,
   "version": "0.1",
-  "description": "Turns the page red when you click the icon",
+  "description": "Highlight the page when you click the icon",
   "permissions": ["activeTab", "scripting"],
   "background": {
     "service_worker": "service-worker.bundle.js"

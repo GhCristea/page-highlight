@@ -6,6 +6,7 @@ module.exports = {
   mode: "development", // 'development' for debugging, 'production' for production
   entry: {
     "service-worker": './src/service-worker.ts',
+    "content": './src/content.ts',
   },
   output: {
     path: path.resolve(__dirname, "dist"),
