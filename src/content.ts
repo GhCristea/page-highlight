@@ -37,11 +37,8 @@ chrome.runtime.onMessage.addListener((msg: WorkerMsg, _sender, sendResponse: Sen
     sendResponse({ error: null, message: `Highlighted ${ranges.length} elements` });
     return true;
   } catch (error) {
-    if (isKnownError(error)) {
-      sendResponse({ error: error.message, message: null });
-      return false;
-    }
-    sendResponse({ error: "Unknown error", message: null });
+    const errorMessage = isKnownError(error) ? error.message : "Unknown error";
+    sendResponse({ error: errorMessage, message: null });
     return false;
   }
 });
