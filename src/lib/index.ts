@@ -20,7 +20,11 @@ const isData = (raw: unknown): raw is Extract<MsgPayload, { data: string }> =>
   objHasKeys(raw, ["data"]) && typeof raw.data === "string";
 
 export const validMsgHeader = <T extends MsgKind>(raw: unknown, msgType: T): raw is Msg<T> => {
-  return objHasKeys(raw, ["type", "target"]) && raw.type === msgType;
+  return (
+    objHasKeys(raw, ["type", "target"]) &&
+    raw.type === msgType &&
+    raw.target === MSG_TARGET_MAP[msgType]
+  );
 };
 
 export const validMsg = <K extends MsgKind>(raw: unknown, k: K): raw is Msg<K> => {
