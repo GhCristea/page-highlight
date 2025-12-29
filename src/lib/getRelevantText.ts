@@ -3,14 +3,16 @@ import { DocumentNoContentError, DocumentNotReadableError } from "./errors";
 import winkNLP, { type SentenceImportance } from "wink-nlp";
 import model from "wink-eng-lite-web-model";
 
-const getRelevantText = () => {
-  if (!isProbablyReaderable(document)) {
+const getRelevantText = (d: Document) => {
+  if (!isProbablyReaderable(d)) {
+    console.error("Document is not readable");
     throw new DocumentNotReadableError("Document is not readable");
   }
 
-  const article = new Readability(document.cloneNode(true) as Document).parse();
+  const article = new Readability(d.cloneNode(true) as Document).parse();
 
   if (!article?.textContent) {
+    console.error("No content found in the document");
     throw new DocumentNoContentError("No content found in the document");
   }
 

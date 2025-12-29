@@ -7,6 +7,7 @@ module.exports = {
   entry: {
     "service-worker": './src/service-worker.ts',
     "content": './src/content.ts',
+    "offscreen": './src/offscreen.ts',
   },
   output: {
     path: path.resolve(__dirname, "dist"),
@@ -29,6 +30,7 @@ module.exports = {
     new CopyWebpackPlugin({
       patterns: [
         { from: "public", to: "." }, // Copy manifest.json and static files
+        { from: "src/offscreen.html", to: "." }, // Copy offscreen.html
       ],
     }),
   ],

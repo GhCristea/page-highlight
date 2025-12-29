@@ -1,20 +1,55 @@
-import { isKnownError } from "./errors";
-import getRelevantText from "./getRelevantText";
-import type { WorkerMsg, ContentMsg } from "./types";
+import { validMsgHeader, validMsg, isError, getMsgHeader } from "./lib";
+import { Msg } from "./lib/types";
+import { REQ_DOC_HTML, PROCESS_DOC, REL_TEXT_RES, HIGHLIGHT_COMPLETE } from "./lib/constants";
 
-type Send = (res: ContentMsg) => void;
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg?.type !== REQ_DOC_HTML) {
+    return false;
+  }
 
-chrome.runtime.onMessage.addListener((msg: WorkerMsg, _sender, sendResponse: Send) => {
+  if (!validMsgHeader(msg, REQ_DOC_HTML)) {
+    console.log("Invalid message received", REQ_DOC_HTML, msg);
+    return false;
+  }
+
+  chrome.runtime.sendMessage<Msg>({
+    ...getMsgHeader(PROCESS_DOC),
+    data: document.documentElement.outerHTML,
+  });
+  sendResponse({ success: true });
+  return false;
+});
+
+chrome.runtime.onMessage.addListener((msg, _sender, _sendResponse) => {
+  if (msg?.type !== REL_TEXT_RES) {
+    return false;
+  }
+
+  if (!validMsg(msg, REL_TEXT_RES)) {
+    console.log("Invalid message received", REL_TEXT_RES, msg);
+    return false;
+  }
+
+  const { type, target } = getMsgHeader(HIGHLIGHT_COMPLETE);
+
+  if (isError(msg)) {
+    chrome.runtime.sendMessage<Msg>({
+      type,
+      target,
+      error: msg.error || "No relevant text received",
+    });
+    return false;
+  }
+
   try {
-    if (!msg.highlight) {
-      sendResponse({ error: "Highlight is falsy!", message: null });
-      return false;
-    }
-
-    const walker = getTreeWalker();
+    const walker = getTreeWalker(msg.data);
 
     if (!walker) {
-      sendResponse({ error: "No Walker!", message: null });
+      chrome.runtime.sendMessage<Msg>({
+        type,
+        target,
+        error: "No Walker!",
+      });
       return false;
     }
 
@@ -34,20 +69,24 @@ chrome.runtime.onMessage.addListener((msg: WorkerMsg, _sender, sendResponse: Sen
       range.surroundContents(mark);
     }
 
-    sendResponse({ error: null, message: `Highlighted ${ranges.length} elements` });
-    return true;
+    chrome.runtime.sendMessage<Msg>({
+      type,
+      target,
+      data: `Highlighted ${ranges.length} elements`,
+    });
   } catch (error) {
-    const errorMessage = isKnownError(error) ? error.message : "Unknown error";
-    sendResponse({ error: errorMessage, message: null });
-    return false;
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    chrome.runtime.sendMessage<Msg>({
+      type,
+      target,
+      error: errorMessage,
+    });
   }
+
+  return false;
 });
 
-// ==> helpers
-
-const getTreeWalker = () => {
-  const relevantText = getRelevantText();
-
+const getTreeWalker = (relevantText: string) => {
   const nodeFilter: NodeFilter = (el) => {
     const isContent =
       el?.parentElement?.checkVisibility() &&
