@@ -1,6 +1,7 @@
-import { getMsgHeader, validMsg } from "./lib";
-import { REQ_DOC_HTML, HIGHLIGHT_COMPLETE, REL_TEXT_RES } from "./lib/constants";
-
+import { PROCESS_DOC } from "./lib/constants";
+import type { Msg } from "./lib/types";
+import highlightElements from "./scripts/highlightElements";
+import getPageContent from "./scripts/getPageContent";
 const OFFSCREEN_DOCUMENT_PATH = "/offscreen.html";
 
 type Variant = "error" | "pending";
@@ -15,16 +16,16 @@ const updateBadge = async (tabId: number, variant: Variant, title: string) => {
   }
 };
 
-async function closeOffscreenDocument() {
+const closeOffscreenDocument = async (): Promise<void> => {
   if (!(await hasDocument())) {
     console.log("No offscreen document found");
     return;
   }
   await chrome.offscreen.closeDocument();
   console.log("Offscreen document closed");
-}
+};
 
-async function hasDocument() {
+const hasDocument = async (): Promise<boolean> => {
   const matchedClients = await chrome.runtime.getContexts({
     contextTypes: ["OFFSCREEN_DOCUMENT"],
   });
@@ -32,9 +33,9 @@ async function hasDocument() {
   return matchedClients.some((client) =>
     client.documentUrl?.endsWith(OFFSCREEN_DOCUMENT_PATH)
   );
-}
+};
 
-chrome.action.onClicked.addListener(async (tab) => {
+const onClicked = async (tab: chrome.tabs.Tab): Promise<void> => {
   const tabId = tab.id;
   if (!tabId) {
     console.log("No tab ID found");
@@ -47,16 +48,21 @@ chrome.action.onClicked.addListener(async (tab) => {
     return;
   }
 
-  if (tab.url?.includes("chrome://")) {
+  if (!tab.url || tab.url.includes("chrome://")) {
     console.log("Not available on this page");
     await updateBadge(tabId, "error", "Not available on this page");
     return;
   }
-
-  await chrome.scripting.executeScript({
+  const [{ result: pageContentResult }] = await chrome.scripting.executeScript({
     target: { tabId },
-    files: ["content.bundle.js"],
+    func: getPageContent,
   });
+
+  if (!pageContentResult || typeof pageContentResult !== "string") {
+    console.error("Failed to get page content", pageContentResult);
+    await updateBadge(tabId, "error", "Failed to get page content");
+    return;
+  }
 
   if (!(await hasDocument())) {
     await chrome.offscreen.createDocument({
@@ -66,57 +72,30 @@ chrome.action.onClicked.addListener(async (tab) => {
     });
   }
 
-  try {
-    await chrome.tabs.sendMessage(tabId, getMsgHeader(REQ_DOC_HTML));
-  } catch (error) {
-    console.error("Failed to send message to content script:", error);
-    await updateBadge(tabId, "error", "Failed to communicate with page");
-    await closeOffscreenDocument();
-  }
-});
+  const { data: processDocData } = await chrome.runtime.sendMessage<Msg>({
+    type: PROCESS_DOC,
+    target: "offscreen",
+    data: pageContentResult,
+  });
 
-chrome.runtime.onMessage.addListener(async (message) => {
-  if (!message?.type || ![HIGHLIGHT_COMPLETE, REL_TEXT_RES].includes(message?.type)) {
-    return false;
+  if (!processDocData || typeof processDocData !== "string") {
+    console.error("Failed to process document", processDocData);
+    await updateBadge(tabId, "error", "Failed to p  rocess document");
+    return;
   }
 
-  switch (message.type) {
-    case HIGHLIGHT_COMPLETE: {
-      if (!validMsg(message, HIGHLIGHT_COMPLETE)) {
-        console.log("Invalid message received", HIGHLIGHT_COMPLETE, message);
-        return false;
-      }
+  const [{ result: highlightCompleteResult }] = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: highlightElements,
+    args: [processDocData],
+  });
 
-      if (message.error) {
-        console.error("Highlight error:", message.error);
-      }
-
-      break;
-    }
-
-    case REL_TEXT_RES: {
-      if (!validMsg(message, REL_TEXT_RES)) {
-        console.log("Invalid message received", REL_TEXT_RES, message);
-        break;
-      }
-
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-
-      if (!tab?.id) {
-        console.error("No tab found");
-        break;
-      }
-
-      chrome.tabs.sendMessage(tab?.id!, message);
-      break;
-    }
-
-    default:
-      console.warn(`Unexpected message type received: '${HIGHLIGHT_COMPLETE}', '${message}'.`);
-      break;
+  if (!highlightCompleteResult || typeof highlightCompleteResult !== "string") {
+    console.error("Failed to highlight elements", highlightCompleteResult);
+    await updateBadge(tabId, "error", "Failed to highlight elements");
   }
 
   await closeOffscreenDocument();
+};
 
-  return false;
-});
+chrome.action.onClicked.addListener(onClicked);

@@ -2,6 +2,7 @@ import { Readability, isProbablyReaderable } from "@mozilla/readability";
 import { DocumentNoContentError, DocumentNotReadableError } from "./errors";
 import winkNLP, { type SentenceImportance } from "wink-nlp";
 import model from "wink-eng-lite-web-model";
+const nlp = winkNLP(model, ["sbd", "pos"]);
 
 const getRelevantText = (d: Document) => {
   if (!isProbablyReaderable(d)) {
@@ -17,7 +18,6 @@ const getRelevantText = (d: Document) => {
   }
 
   const top = 0.2;
-  const nlp = winkNLP(model, ["sbd", "pos"]);
   const doc = nlp.readDoc(article.textContent);
 
   const descOrderImportance = (

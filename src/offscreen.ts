@@ -1,10 +1,9 @@
 import getRelevantText from "./lib/getRelevantText";
 import { isKnownError } from "./lib/errors";
 import { isError, validMsg, getMsgHeader } from "./lib";
-import { Msg } from "./lib/types";
 import { REL_TEXT_RES, PROCESS_DOC } from "./lib/constants";
 
-chrome.runtime.onMessage.addListener((message) => {
+chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
   if (message?.type !== PROCESS_DOC) {
     return false;
   }
@@ -24,10 +23,9 @@ chrome.runtime.onMessage.addListener((message) => {
   try {
     const parser = new DOMParser();
     const document = parser.parseFromString(message.data, "text/html");
-
     const relevantText = getRelevantText(document);
 
-    chrome.runtime.sendMessage<Msg>({
+    sendResponse({
       type,
       target,
       data: relevantText,
@@ -36,15 +34,16 @@ chrome.runtime.onMessage.addListener((message) => {
     console.error("Error occurred while sending the message", REL_TEXT_RES, error);
     const errorMessage = getErrMessage(error);
 
-    chrome.runtime.sendMessage<Msg>({
+    sendResponse({
       type,
       target,
       error: errorMessage,
     });
   }
 
-  return false;
+  return true;
 });
-function getErrMessage(error: unknown) {
+
+const getErrMessage = (error: unknown): string => {
   return isKnownError(error) ? error.message : "Unknown error!";
-}
+};
