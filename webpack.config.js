@@ -2,6 +2,7 @@ const path = require("path");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 
+/** @type {import('webpack').Configuration} */
 module.exports = {
   mode: "development", // 'development' for debugging, 'production' for production
   entry: {
