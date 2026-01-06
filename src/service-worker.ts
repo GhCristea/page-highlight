@@ -80,7 +80,7 @@ const onClicked = async (tab: chrome.tabs.Tab): Promise<void> => {
 
   if (!processDocData || typeof processDocData !== "string") {
     console.error("Failed to process document", processDocData);
-    await updateBadge(tabId, "error", "Failed to p  rocess document");
+    await updateBadge(tabId, "error", "Failed to process document");
     return;
   }
 
