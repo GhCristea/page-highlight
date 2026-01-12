@@ -1,24 +1,19 @@
 import getRelevantText from "./lib/getRelevantText";
 import { isKnownError } from "./lib/errors";
-import { isError, validMsg, getMsgHeader } from "./lib";
+import { getMsgHeader, validMsgHeader } from "./lib";
 import { REL_TEXT_RES, PROCESS_DOC } from "./lib/constants";
 
 chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
-  if (message?.type !== PROCESS_DOC) {
-    return false;
-  }
-
-  if (!validMsg(message, PROCESS_DOC)) {
-    console.log("Invalid message received", PROCESS_DOC, message);
-    return false;
-  }
-
-  if (isError(message)) {
-    console.error("Error occurred while processing the document", REL_TEXT_RES, message);
+  if (!validMsgHeader(message, PROCESS_DOC)) {
     return false;
   }
 
   const { type, target } = getMsgHeader(REL_TEXT_RES);
+
+  if (typeof message.data !== "string") {
+    console.error(`Invalid ${PROCESS_DOC} message received: `, message.error);
+    return false;
+  }
 
   try {
     const parser = new DOMParser();
@@ -31,7 +26,7 @@ chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
       data: relevantText,
     });
   } catch (error) {
-    console.error("Error occurred while sending the message", REL_TEXT_RES, error);
+    console.error("Error occurred while sending the message", error);
     const errorMessage = getErrMessage(error);
 
     sendResponse({

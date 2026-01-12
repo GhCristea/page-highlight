@@ -7,8 +7,6 @@ module.exports = {
   mode: "development", // 'development' for debugging, 'production' for production
   entry: {
     "service-worker": './src/service-worker.ts',
-    "getPageContent": './src/scripts/getPageContent.ts',
-    "highlightElements": './src/scripts/highlightElements.ts',
     "offscreen": './src/offscreen.ts',
   },
   output: {

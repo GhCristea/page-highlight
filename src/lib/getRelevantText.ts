@@ -1,7 +1,8 @@
 import { Readability, isProbablyReaderable } from "@mozilla/readability";
 import { DocumentNoContentError, DocumentNotReadableError } from "./errors";
-import winkNLP, { type SentenceImportance } from "wink-nlp";
+import winkNLP, { type SentenceImportance, type Sentences } from "wink-nlp";
 import model from "wink-eng-lite-web-model";
+import type { SentenceData } from "./types";
 const nlp = winkNLP(model, ["sbd", "pos"]);
 
 const getRelevantText = (d: Document) => {
@@ -24,16 +25,19 @@ const getRelevantText = (d: Document) => {
     doc.out(nlp.its.sentenceWiseImportance) as SentenceImportance[]
   ).sort((a, b) => b.importance - a.importance);
 
-  const topSentencesIndexes = new Set(
-    descOrderImportance.slice(0, descOrderImportance.length * top).map((s) => s.index)
+  const topSentencesIndexes = new Map(
+    descOrderImportance
+      .slice(0, descOrderImportance.length * top)
+      .map((s) => [s.index, s.importance])
   );
 
-  let relevantText: string = "";
+  const relevantText: SentenceData[] = [];
 
   doc.sentences().each((e, i) => {
-    relevantText = topSentencesIndexes.has(e.index())
-      ? relevantText.concat("\n", e.out())
-      : relevantText;
+    const importance = topSentencesIndexes.get(e.index());
+    if (importance) {
+      relevantText.push({ importance, sentence: e.out() });
+    }
   });
 
   return relevantText;
