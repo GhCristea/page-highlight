@@ -21,7 +21,9 @@ const updateBadge = async (tabId: number, variant: Variant, title: string) => {
 
 let offscreenTimeout: NodeJS.Timeout | null = null;
 
-const closeOffscreenDocument = async (): Promise<void> => {
+const OFFSCREEN_TIMEOUT = 10000;
+
+const closeOffscreenDocument = async () => {
   if (offscreenTimeout) {
     clearTimeout(offscreenTimeout);
   }
@@ -29,7 +31,7 @@ const closeOffscreenDocument = async (): Promise<void> => {
   offscreenTimeout = setTimeout(() => {
     chrome.offscreen.closeDocument();
     offscreenTimeout = null;
-  }, 10000);
+  }, OFFSCREEN_TIMEOUT);
 };
 
 const setupOffscreenDocument = async () => {
