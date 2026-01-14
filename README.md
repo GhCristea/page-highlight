@@ -21,25 +21,25 @@ sequenceDiagram
     participant OD as Offscreen Document
 
     User->>SW: Click extension icon
-    
+
     SW->>SW: Check tab status & URL
     SW->>SW: Inject content.bundle.js
     SW->>SW: Create offscreen document (if needed)
     SW->>CS: REQ_DOC_HTML (via chrome.tabs.sendMessage)
-    
+
     CS->>CS: Get document.documentElement.outerHTML
     CS->>OD: PROCESS_DOC (with HTML)
-    
+
     OD->>OD: Parse HTML with DOMParser
     OD->>OD: Extract relevant text (getRelevantText)
     OD->>SW: REL_TEXT_RES (with relevant text)
-    
+
     SW->>SW: Receive REL_TEXT_RES
     SW->>CS: REL_TEXT_RES (forward via chrome.tabs.sendMessage)
-    
+
     CS->>CS: Find matching text nodes
     CS->>CS: Highlight text
     CS->>SW: HIGHLIGHT_COMPLETE
-    
+
     SW->>SW: Close offscreen document
 ```

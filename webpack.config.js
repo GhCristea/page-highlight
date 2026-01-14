@@ -6,8 +6,8 @@ const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 module.exports = {
   mode: "development", // 'development' for debugging, 'production' for production
   entry: {
-    "service-worker": './src/service-worker.ts',
-    "offscreen": './src/offscreen.ts',
+    "service-worker": "./src/service-worker.ts",
+    offscreen: "./src/offscreen.ts",
   },
   output: {
     path: path.resolve(__dirname, "dist"),
