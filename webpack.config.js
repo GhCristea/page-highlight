@@ -2,11 +2,12 @@ const path = require("path");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 
+/** @type {import('webpack').Configuration} */
 module.exports = {
   mode: "development", // 'development' for debugging, 'production' for production
   entry: {
-    "service-worker": './src/service-worker.ts',
-    "content": './src/content.ts',
+    "service-worker": "./src/service-worker.ts",
+    offscreen: "./src/offscreen.ts",
   },
   output: {
     path: path.resolve(__dirname, "dist"),
@@ -29,6 +30,7 @@ module.exports = {
     new CopyWebpackPlugin({
       patterns: [
         { from: "public", to: "." }, // Copy manifest.json and static files
+        { from: "src/offscreen.html", to: "." }, // Copy offscreen.html
       ],
     }),
   ],
