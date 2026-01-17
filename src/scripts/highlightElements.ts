@@ -1,13 +1,13 @@
-const highlightElements = (sentences: string[]) => {
-  const HIGHLIGHT_STYLE_ID = "page-highlight-styles";
+const highlightElements = (sentences: string[], styleId: string) => {
+  const textTags = "abbr, acronym, address, blockquote, br, cite, code, dfn, div, em, h1, h2, h3, h4, h5, h6, kbd, p, pre, q, samp, span, strong, var";
+  const textExtTags = "b, big, hr, i, small, sub, sup, tt";
+  const txtOtherTags = "dl, dt, dd, ol, ul, li, caption, table, td, th, tr, a";
+  const textAllTags = `${textTags}, ${textExtTags}, ${txtOtherTags}`;
+  const structureTags = "body, head, html, title";
 
   try {
-    if (document.getElementById(HIGHLIGHT_STYLE_ID)) {
-      return;
-    }
-
     const style = document.createElement("style");
-    style.id = HIGHLIGHT_STYLE_ID;
+    style.id = styleId;
     style.textContent = `
     ::highlight(nlp-highlight) {
       background-color: rgba(255, 255, 0, 0.4);
@@ -28,9 +28,21 @@ const highlightElements = (sentences: string[]) => {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
       acceptNode: (node) => {
         const parent = node.parentElement;
-        if (parent && (parent.tagName === "SCRIPT" || parent.tagName === "STYLE")) {
+
+        if (!parent) {
+          return NodeFilter.FILTER_SKIP;
+        }
+
+        const parentTag = parent.tagName.toLocaleLowerCase();
+
+        if (structureTags.includes(parentTag)) {
+          return NodeFilter.FILTER_SKIP;
+        }
+
+        if (!textAllTags.includes(parentTag)) {
           return NodeFilter.FILTER_REJECT;
         }
+
         return NodeFilter.FILTER_ACCEPT;
       },
     });
@@ -47,7 +59,7 @@ const highlightElements = (sentences: string[]) => {
         while (true) {
           const index = textContent.indexOf(sentence, searchIndex);
           if (index === -1) break;
-          if (!node) continue;
+          if (!node) break;
 
           try {
             const range = new Range();

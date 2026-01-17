@@ -5,6 +5,7 @@ import { Msg } from "./lib/types";
 import { isString } from "./lib";
 
 const OFFSCREEN_DOCUMENT_PATH = "/offscreen.html";
+const HIGHLIGHT_STYLE_ID = "page-highlight-styles";
 
 type MsgIn = Msg<typeof OFFSCREEN>;
 type MsgOut = Msg<typeof BACKGROUND>;
@@ -92,6 +93,18 @@ const onClicked = async (tab: chrome.tabs.Tab): Promise<void> => {
     return;
   }
 
+  const [{ result: isHighlighted }] = await chrome.scripting.executeScript({
+    target: { tabId},
+    func: (highlightId) => {
+      return !!document.getElementById(highlightId)
+    },
+    args: [HIGHLIGHT_STYLE_ID]
+  });
+
+  if (isHighlighted) {
+     return;
+  }
+
   const [{ result: pageContentResult }] = await chrome.scripting.executeScript({
     target: { tabId },
     func: getPageContent,
@@ -140,7 +153,7 @@ const onClicked = async (tab: chrome.tabs.Tab): Promise<void> => {
   const [{ result: highlightCompleteResult }] = await chrome.scripting.executeScript({
     target: { tabId },
     func: highlightElements,
-    args: [relevantTxt],
+    args: [relevantTxt, HIGHLIGHT_STYLE_ID],
   });
 
   if (!Array.isArray(highlightCompleteResult)) {
