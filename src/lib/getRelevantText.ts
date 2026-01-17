@@ -1,24 +1,11 @@
-import { Readability, isProbablyReaderable } from "@mozilla/readability";
-import { DocumentNoContentError, DocumentNotReadableError } from "./errors";
 import winkNLP, { type SentenceImportance } from "wink-nlp";
 import model from "wink-eng-lite-web-model";
 const nlp = winkNLP(model, ["sbd", "pos"]);
 
-const getRelevantText = (d: Document) => {
-  if (!isProbablyReaderable(d)) {
-    console.error("Document is not readable");
-    throw new DocumentNotReadableError("Document is not readable");
-  }
-
-  const article = new Readability(d.cloneNode(true) as Document).parse();
-
-  if (!article?.textContent) {
-    console.error("No content found in the document");
-    throw new DocumentNoContentError("No content found in the document");
-  }
+const getRelevantText = (textContent: string) => {
 
   const top = 0.2;
-  const doc = nlp.readDoc(article.textContent);
+  const doc = nlp.readDoc(textContent);
 
   const descOrderImportance = (
     doc.out(nlp.its.sentenceWiseImportance) as SentenceImportance[]

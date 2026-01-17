@@ -1,8 +1,9 @@
 import getRelevantText from "./lib/getRelevantText";
-import { isKnownError } from "./lib/errors";
+import { DocumentNoContentError, DocumentNotReadableError, isKnownError } from "./lib/errors";
 import { Msg, Payload } from "./lib/types";
 import { BACKGROUND, OFFSCREEN, PROCESS_DOC } from "./lib/constants";
 import { isString, objHasKeys, isError } from "./lib";
+import { isProbablyReaderable, Readability } from "@mozilla/readability";
 
 type MsgIn = Msg<typeof BACKGROUND>;
 type MsgOut = Msg<typeof OFFSCREEN>;
@@ -31,8 +32,19 @@ chrome.runtime.onMessage.addListener((message, _, sendResponse: SendRes) => {
 
   try {
     const parser = new DOMParser();
-    const document = parser.parseFromString(message.data, "text/html");
-    const sentences = getRelevantText(document);
+    const doc = parser.parseFromString(message.data, "text/html");
+
+    if (!isProbablyReaderable(doc)) {
+      throw new DocumentNotReadableError("Document is not readable");
+    }
+
+    const parsed = new Readability(doc).parse();
+
+    if (!parsed?.textContent) {
+      throw new DocumentNoContentError("No text content found in the document");
+    }
+
+    const sentences = getRelevantText(parsed.textContent);
 
     sendResponse({ data: sentences });
   } catch (error) {
