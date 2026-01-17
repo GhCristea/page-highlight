@@ -1,10 +1,13 @@
-import { PROCESS_DOC } from "./lib/constants";
-import type { Msg, SentenceData } from "./lib/types";
+import { PROCESS_DOC, OFFSCREEN, BACKGROUND } from "./lib/constants";
 import highlightElements from "./scripts/highlightElements";
 import getPageContent from "./scripts/getPageContent";
-import { isSentenceData } from "./lib";
+import { Msg } from "./lib/types";
+import { isString } from "./lib";
 
 const OFFSCREEN_DOCUMENT_PATH = "/offscreen.html";
+
+type MsgIn = Msg<typeof OFFSCREEN>;
+type MsgOut = Msg<typeof BACKGROUND>;
 
 type Variant = "error" | "pending";
 
@@ -19,23 +22,35 @@ const updateBadge = async (tabId: number, variant: Variant, title: string) => {
   }
 };
 
+let activeRequests = 0;
 let offscreenTimeout: NodeJS.Timeout | null = null;
 
-const OFFSCREEN_TIMEOUT = 10000;
+const OFFSCREEN_TIMEOUT = 1000;
 
-const closeOffscreenDocument = async () => {
-  if (offscreenTimeout) {
-    clearTimeout(offscreenTimeout);
+const teardownOffscreenDocument = async () => {
+  activeRequests--;
+
+  if (activeRequests <= 0) {
+    if (offscreenTimeout) {
+      clearTimeout(offscreenTimeout);
+    }
+
+    offscreenTimeout = setTimeout(() => {
+      if (activeRequests <= 0) {
+        chrome.offscreen.closeDocument();
+        offscreenTimeout = null;
+      }
+    }, OFFSCREEN_TIMEOUT);
   }
-
-  offscreenTimeout = setTimeout(() => {
-    chrome.offscreen.closeDocument();
-    offscreenTimeout = null;
-  }, OFFSCREEN_TIMEOUT);
 };
 
 const setupOffscreenDocument = async () => {
-  if (offscreenTimeout) clearTimeout(offscreenTimeout);
+  activeRequests++;
+
+  if (offscreenTimeout) {
+    clearTimeout(offscreenTimeout);
+    offscreenTimeout = null;
+  }
 
   if (!(await hasDocument())) {
     await chrome.offscreen.createDocument({
@@ -82,35 +97,59 @@ const onClicked = async (tab: chrome.tabs.Tab): Promise<void> => {
     func: getPageContent,
   });
 
-  if (typeof pageContentResult !== "string") {
+  if (!pageContentResult) {
     await updateBadge(tabId, "error", "Failed to get page content");
     return;
   }
 
   await setupOffscreenDocument();
 
-  const { data: processDocData } = await chrome.runtime.sendMessage({
-    type: PROCESS_DOC,
-    target: "offscreen",
-    data: pageContentResult,
-  });
+  if (!(await hasDocument())) {
+    await updateBadge(tabId, "error", "Offscreen document not ready");
+    await teardownOffscreenDocument();
+    return;
+  }
 
-  if (!isSentenceData(processDocData)) {
-    await updateBadge(tabId, "error", "Failed to process document");
+  let relevantTxt: MsgIn["data"] = null;
+  let error: unknown = null;
+
+  try {
+    const response = await chrome.runtime.sendMessage<MsgOut, MsgIn>({
+      type: PROCESS_DOC,
+      data: pageContentResult,
+    });
+
+    if (chrome.runtime.lastError) {
+      error = chrome.runtime.lastError.message || null;
+    } else if (response) {
+      relevantTxt = response.data;
+      error = response.error;
+    } else {
+      error = "No response from offscreen document";
+    }
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Communication error";
+  }
+
+  if (!relevantTxt) {
+    await updateBadge(tabId, "error", isString(error) ? error : "Failed to process document");
+    await teardownOffscreenDocument();
     return;
   }
 
   const [{ result: highlightCompleteResult }] = await chrome.scripting.executeScript({
     target: { tabId },
     func: highlightElements,
-    args: [processDocData],
+    args: [relevantTxt],
   });
 
-  if (typeof highlightCompleteResult !== "string") {
+  if (!Array.isArray(highlightCompleteResult)) {
     await updateBadge(tabId, "error", "Failed to highlight elements");
   }
 
-  await closeOffscreenDocument();
+  console.log(highlightCompleteResult);
+
+  await teardownOffscreenDocument();
 };
 
 chrome.action.onClicked.addListener(onClicked);

@@ -1,22 +1,25 @@
-type MsgTargetMap = typeof import("./constants").MSG_TARGET_MAP;
+import { BACKGROUND, OFFSCREEN, PROCESS_DOC, REL_TEXT_RES } from "./constants";
 
-export type SentenceData = { sentence: string; importance: number };
-export type MsgKind = keyof MsgTargetMap;
-
-type MsgData = {
-  "process-document": string;
-  "relevant-text-result": SentenceData[];
+type MsgMap = {
+  [BACKGROUND]: {
+    [OFFSCREEN]: {
+      type: typeof PROCESS_DOC;
+    } & Payload<string>;
+  };
+  [OFFSCREEN]: {
+    [BACKGROUND]: {
+      type: typeof REL_TEXT_RES;
+    } & Payload<string[]>;
+  };
 };
 
-export type MsgPayload<T extends MsgKind> =
-  | { data?: null; error: string }
-  | { data: MsgData[T]; error?: null };
+type Sender = keyof MsgMap;
+type Receiver<T extends Sender> = keyof MsgMap[T];
 
-export type MsgHeader<T extends MsgKind = MsgKind> = T extends MsgKind
-  ? {
-      target: MsgTargetMap[T];
-      type: T;
-    }
-  : never;
+export type Msg<
+  From extends Sender,
+  To extends Receiver<From> = Receiver<From>
+> = MsgMap[From][To];
 
-export type Msg<T extends MsgKind = MsgKind> = MsgHeader<T> & MsgPayload<T>;
+export type Payload<T> = { data: T; error?: null } | { data?: null; error: string };
+export type ErrorPayload = Extract<Payload<unknown>, { error: string }>;
