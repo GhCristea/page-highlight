@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/chrome-manifest",
   "name": "Page Highlight",
   "action": {},
   "manifest_version": 3,
