@@ -94,15 +94,15 @@ const onClicked = async (tab: chrome.tabs.Tab): Promise<void> => {
   }
 
   const [{ result: isHighlighted }] = await chrome.scripting.executeScript({
-    target: { tabId},
+    target: { tabId },
     func: (highlightId) => {
-      return !!document.getElementById(highlightId)
+      return !!document.getElementById(highlightId);
     },
-    args: [HIGHLIGHT_STYLE_ID]
+    args: [HIGHLIGHT_STYLE_ID],
   });
 
   if (isHighlighted) {
-     return;
+    return;
   }
 
   const [{ result: pageContentResult }] = await chrome.scripting.executeScript({

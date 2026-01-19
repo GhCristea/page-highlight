@@ -3,7 +3,6 @@ import model from "wink-eng-lite-web-model";
 const nlp = winkNLP(model, ["sbd", "pos"]);
 
 const getRelevantText = (textContent: string) => {
-
   const top = 0.2;
   const doc = nlp.readDoc(textContent);
 

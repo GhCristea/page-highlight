@@ -8,7 +8,7 @@ import { isProbablyReaderable, Readability } from "@mozilla/readability";
 type MsgIn = Msg<typeof BACKGROUND>;
 type MsgOut = Msg<typeof OFFSCREEN>;
 
-type SendRes = (p: Payload<MsgOut['data']>) => void;
+type SendRes = (p: Payload<MsgOut["data"]>) => void;
 
 const validHeader = (h: unknown): h is Pick<MsgIn, "type"> =>
   objHasKeys(h, ["type"]) && h.type === PROCESS_DOC;
