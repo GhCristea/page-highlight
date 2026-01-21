@@ -1,15 +1,14 @@
 import {
-  PROCESS_DOC,
-  OFFSCREEN,
-  BACKGROUND,
-  SENTENCE_IMPORTANCE,
+  type OFFSCREEN,
+  type BACKGROUND,
   type CONTENT_SCRIPT,
+  PROCESS_DOC,
+  SENTENCE_IMPORTANCE,
   HIGHLIGHT,
   HIGHLIGHT_PREFIX,
 } from "../lib/constants";
 import getPageContent from "../scripts/getPageContent";
 import { Msg } from "../lib/types";
-import { isString } from "../lib";
 import { updateBadge } from "./updateBadge";
 import { offscreenManager } from "./OffscreenManager";
 
@@ -58,7 +57,8 @@ const onClicked = async (tab: chrome.tabs.Tab): Promise<void> => {
   });
 
   if (!pageContentResult) {
-    await updateBadge(tabId, "error", "Failed to get page content");
+    const error = chrome.runtime.lastError?.message ?? "Failed to get page content";
+    await updateBadge(tabId, "error", error);
     return;
   }
 
@@ -70,37 +70,23 @@ const onClicked = async (tab: chrome.tabs.Tab): Promise<void> => {
     offscreenManager.open(),
   ]);
 
-  let sentences: MsgInOffScr["data"] = null;
-  let error: unknown = null;
+  const offScrRes = await chrome.runtime.sendMessage<MsgOutOffScr, MsgInOffScr>({
+    type: PROCESS_DOC,
+    data: pageContentResult,
+  });
 
-  try {
-    const response = await chrome.runtime.sendMessage<MsgOutOffScr, MsgInOffScr>({
-      type: PROCESS_DOC,
-      data: pageContentResult,
-    });
-
-    if (chrome.runtime.lastError) {
-      error = chrome.runtime.lastError.message || null;
-    } else if (response) {
-      sentences = response.data;
-      error = response.error;
-    } else {
-      error = "No response from offscreen document";
-    }
-  } catch (err) {
-    error = err instanceof Error ? err.message : "Communication error";
-  }
-
-  if (!sentences) {
-    await updateBadge(tabId, "error", isString(error) ? error : "Failed to process document");
+  if (!offScrRes.data) {
+    const error =
+      (offScrRes.error || chrome.runtime.lastError?.message) ?? "Failed to process document";
+    await updateBadge(tabId, "error", error);
     await offscreenManager.close();
     return;
   }
 
-  const [{ data: highlightCompleteResult }] = await Promise.all([
+  const [highlightResult] = await Promise.all([
     chrome.tabs.sendMessage<MsgOutScripts, MsgInScripts>(tabId, {
       type: HIGHLIGHT,
-      data: sentences,
+      data: offScrRes.data,
     }),
     chrome.scripting.insertCSS({
       target: { tabId },
@@ -109,11 +95,12 @@ const onClicked = async (tab: chrome.tabs.Tab): Promise<void> => {
     }),
   ]);
 
-  if (!Array.isArray(highlightCompleteResult)) {
-    await updateBadge(tabId, "error", "Failed to highlight elements");
+  if (!Array.isArray(highlightResult.data)) {
+    const error =
+      (highlightResult.error || chrome.runtime.lastError?.message) ??
+      "Failed to highlight elements";
+    await updateBadge(tabId, "error", error);
   }
-
-  console.log(highlightCompleteResult);
 
   await offscreenManager.close();
 };
