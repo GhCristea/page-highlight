@@ -1,8 +1,10 @@
 import winkNLP, { type SentenceImportance } from "wink-nlp";
 import model from "wink-eng-lite-web-model";
+import type { Sentence } from "../lib/types";
+import { SENTENCE_IMPORTANCE } from "../lib/constants";
 const nlp = winkNLP(model, ["sbd", "pos"]);
 
-const getRelevantText = (textContent: string) => {
+const getRelevantText = (textContent: string): Sentence[] => {
   const top = 0.2;
   const doc = nlp.readDoc(textContent);
 
@@ -10,22 +12,25 @@ const getRelevantText = (textContent: string) => {
     doc.out(nlp.its.sentenceWiseImportance) as SentenceImportance[]
   ).sort((a, b) => b.importance - a.importance);
 
-  const topSentencesIndexes = new Map(
-    descOrderImportance
-      .slice(0, descOrderImportance.length * top)
-      .map((s) => [s.index, s.importance])
-  );
+  const topSentences = descOrderImportance.slice(0, descOrderImportance.length * top);
 
-  const relevantText: string[] = [];
+  const splitIndex = Math.floor(topSentences.length / 3);
+  const high = topSentences[splitIndex].importance;
+  const medium = topSentences[splitIndex * 2].importance;
 
-  doc.sentences().each((e, i) => {
-    const importance = topSentencesIndexes.get(e.index());
-    if (typeof importance === "number") {
-      relevantText.push(e.out());
-    }
-  });
+  const sentences = topSentences.map((si) => ({
+    txt: doc.sentences().itemAt(si.index).out(),
+    level:
+      si.importance > high
+        ? SENTENCE_IMPORTANCE[0]
+        : si.importance > medium
+        ? SENTENCE_IMPORTANCE[1]
+        : SENTENCE_IMPORTANCE[2],
+  }));
 
-  return relevantText;
+  doc.sentences().itemAt;
+
+  return sentences;
 };
 
 export default getRelevantText;

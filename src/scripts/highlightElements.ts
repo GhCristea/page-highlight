@@ -1,10 +1,13 @@
-const highlightElements = (sentences: string[], highlightLevel: string) => {
+import type { Sentence } from "../lib/types";
+
+const highlightElements = (sentences: Sentence[], highlightLevel: string) => {
   const textTags =
     "abbr, acronym, address, blockquote, br, cite, code, dfn, div, em, h1, h2, h3, h4, h5, h6, kbd, p, pre, q, samp, span, strong, var";
   const textExtTags = "b, big, hr, i, small, sub, sup, tt";
   const txtOtherTags = "dl, dt, dd, ol, ul, li, caption, table, td, th, tr, a";
   const textAllTags = `${textTags}, ${textExtTags}, ${txtOtherTags}`;
   const structureTags = "body, head, html, title";
+  const IMPORTANCE = ["high", "medium", "low"] satisfies Sentence["level"][];
 
   try {
     if (!CSS.highlights) {
@@ -13,7 +16,11 @@ const highlightElements = (sentences: string[], highlightLevel: string) => {
 
     CSS.highlights.clear();
 
-    const ranges: Range[] = [];
+    const ranges: Record<Sentence["level"], Range[]> = {
+      high: [],
+      medium: [],
+      low: [],
+    };
 
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
       acceptNode: (node) => {
@@ -43,19 +50,18 @@ const highlightElements = (sentences: string[], highlightLevel: string) => {
       if (!node?.textContent) continue;
 
       const textContent = node.textContent;
-
       sentences.forEach((sentence) => {
         let searchIndex = 0;
         while (true) {
-          const index = textContent.indexOf(sentence, searchIndex);
+          const index = textContent.indexOf(sentence.txt, searchIndex);
           if (index === -1) break;
           if (!node) break;
 
           try {
             const range = new Range();
             range.setStart(node, index);
-            range.setEnd(node, index + sentence.length);
-            ranges.push(range);
+            range.setEnd(node, index + sentence.txt.length);
+            ranges[sentence.level].push(range);
           } catch (err) {
             console.warn("Failed to create range for sentence:", err);
           }
@@ -65,9 +71,11 @@ const highlightElements = (sentences: string[], highlightLevel: string) => {
       });
     }
 
-    if (ranges.length > 0) {
-      const highlight = new Highlight(...ranges);
-      CSS.highlights.set(highlightLevel, highlight);
+    for (const level of IMPORTANCE) {
+      if (ranges[level].length > 0) {
+        const highlight = new Highlight(...ranges[level]);
+        CSS.highlights.set(highlightLevel + `-${level}`, highlight);
+      }
     }
 
     return sentences;

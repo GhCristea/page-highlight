@@ -1,5 +1,10 @@
 import { BACKGROUND, OFFSCREEN, PROCESS_DOC, REL_TEXT_RES } from "./constants";
 
+export type Sentence = {
+  txt: string;
+  level: typeof import("./constants").SENTENCE_IMPORTANCE[number];
+};
+
 type MsgMap = {
   [BACKGROUND]: {
     [OFFSCREEN]: {
@@ -9,7 +14,7 @@ type MsgMap = {
   [OFFSCREEN]: {
     [BACKGROUND]: {
       type: typeof REL_TEXT_RES;
-    } & Payload<string[]>;
+    } & Payload<Sentence[]>;
   };
 };
 

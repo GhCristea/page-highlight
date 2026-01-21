@@ -1,4 +1,4 @@
-import { PROCESS_DOC, OFFSCREEN, BACKGROUND } from "../lib/constants";
+import { PROCESS_DOC, OFFSCREEN, BACKGROUND, SENTENCE_IMPORTANCE } from "../lib/constants";
 import highlightElements from "../scripts/highlightElements";
 import getPageContent from "../scripts/getPageContent";
 import { Msg } from "../lib/types";
@@ -6,7 +6,7 @@ import { isString } from "../lib";
 import { updateBadge } from "./updateBadge";
 import { offscreenManager } from "./OffscreenManager";
 
-const HIGHLIGHT_LEVEL = "nlp-highlight";
+const HIGHLIGHT_PREFIX = "nlp-highlight";
 
 type MsgIn = Msg<typeof OFFSCREEN>;
 type MsgOut = Msg<typeof BACKGROUND>;
@@ -38,7 +38,7 @@ const onClicked = async (tab: chrome.tabs.Tab): Promise<void> => {
       }
       return CSS.highlights.has(highlightLevel);
     },
-    args: [HIGHLIGHT_LEVEL],
+    args: [HIGHLIGHT_PREFIX + `-${SENTENCE_IMPORTANCE[0]}`],
   });
 
   if (isHighlighted) {
@@ -57,7 +57,7 @@ const onClicked = async (tab: chrome.tabs.Tab): Promise<void> => {
 
   await offscreenManager.open();
 
-  let relevantTxt: MsgIn["data"] = null;
+  let sentences: MsgIn["data"] = null;
   let error: unknown = null;
 
   try {
@@ -69,7 +69,7 @@ const onClicked = async (tab: chrome.tabs.Tab): Promise<void> => {
     if (chrome.runtime.lastError) {
       error = chrome.runtime.lastError.message || null;
     } else if (response) {
-      relevantTxt = response.data;
+      sentences = response.data;
       error = response.error;
     } else {
       error = "No response from offscreen document";
@@ -78,7 +78,7 @@ const onClicked = async (tab: chrome.tabs.Tab): Promise<void> => {
     error = err instanceof Error ? err.message : "Communication error";
   }
 
-  if (!relevantTxt) {
+  if (!sentences) {
     await updateBadge(tabId, "error", isString(error) ? error : "Failed to process document");
     await offscreenManager.close();
     return;
@@ -88,7 +88,7 @@ const onClicked = async (tab: chrome.tabs.Tab): Promise<void> => {
     chrome.scripting.executeScript({
       target: { tabId },
       func: highlightElements,
-      args: [relevantTxt, HIGHLIGHT_LEVEL],
+      args: [sentences, HIGHLIGHT_PREFIX],
     }),
     chrome.scripting.insertCSS({
       target: { tabId },
