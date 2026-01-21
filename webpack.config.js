@@ -8,6 +8,7 @@ module.exports = {
   entry: {
     "service-worker": "./src/service-worker/index.ts",
     offscreen: "./src/offscreen/index.ts",
+    scripts: "./src/scripts/index.ts",
   },
   output: {
     path: path.resolve(__dirname, "dist"),

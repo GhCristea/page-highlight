@@ -5,7 +5,7 @@ import { BACKGROUND, OFFSCREEN, PROCESS_DOC } from "../lib/constants";
 import { isString, objHasKeys, isError } from "../lib";
 import { isProbablyReaderable, Readability } from "@mozilla/readability";
 
-type MsgIn = Msg<typeof BACKGROUND>;
+type MsgIn = Msg<typeof BACKGROUND, typeof OFFSCREEN>;
 type MsgOut = Msg<typeof OFFSCREEN>;
 
 type SendRes = (p: Payload<MsgOut["data"]>) => void;

@@ -1,8 +1,17 @@
-import { BACKGROUND, OFFSCREEN, PROCESS_DOC, REL_TEXT_RES } from "./constants";
+import type {
+  BACKGROUND,
+  OFFSCREEN,
+  PROCESS_DOC,
+  REL_TEXT_RES,
+  HIGHLIGHT,
+  SENTENCE_IMPORTANCE,
+  CONTENT_SCRIPT,
+  HIGHLIGHT_RES,
+} from "./constants";
 
 export type Sentence = {
   txt: string;
-  level: typeof import("./constants").SENTENCE_IMPORTANCE[number];
+  level: (typeof SENTENCE_IMPORTANCE)[number];
 };
 
 type MsgMap = {
@@ -10,10 +19,18 @@ type MsgMap = {
     [OFFSCREEN]: {
       type: typeof PROCESS_DOC;
     } & Payload<string>;
+    [CONTENT_SCRIPT]: {
+      type: typeof HIGHLIGHT;
+    } & Payload<Sentence[]>;
   };
   [OFFSCREEN]: {
     [BACKGROUND]: {
       type: typeof REL_TEXT_RES;
+    } & Payload<Sentence[]>;
+  };
+  [CONTENT_SCRIPT]: {
+    [BACKGROUND]: {
+      type: typeof HIGHLIGHT_RES;
     } & Payload<Sentence[]>;
   };
 };

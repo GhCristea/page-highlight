@@ -1,15 +1,22 @@
-import { PROCESS_DOC, OFFSCREEN, BACKGROUND, SENTENCE_IMPORTANCE } from "../lib/constants";
-import highlightElements from "../scripts/highlightElements";
+import {
+  PROCESS_DOC,
+  OFFSCREEN,
+  BACKGROUND,
+  SENTENCE_IMPORTANCE,
+  type CONTENT_SCRIPT,
+  HIGHLIGHT,
+  HIGHLIGHT_PREFIX,
+} from "../lib/constants";
 import getPageContent from "../scripts/getPageContent";
 import { Msg } from "../lib/types";
 import { isString } from "../lib";
 import { updateBadge } from "./updateBadge";
 import { offscreenManager } from "./OffscreenManager";
 
-const HIGHLIGHT_PREFIX = "nlp-highlight";
-
-type MsgIn = Msg<typeof OFFSCREEN>;
-type MsgOut = Msg<typeof BACKGROUND>;
+type MsgInOffScr = Msg<typeof OFFSCREEN>;
+type MsgOutOffScr = Msg<typeof BACKGROUND, typeof OFFSCREEN>;
+type MsgOutScripts = Msg<typeof BACKGROUND, typeof CONTENT_SCRIPT>;
+type MsgInScripts = Msg<typeof CONTENT_SCRIPT>;
 
 const onClicked = async (tab: chrome.tabs.Tab): Promise<void> => {
   const tabId = tab.id;
@@ -55,13 +62,19 @@ const onClicked = async (tab: chrome.tabs.Tab): Promise<void> => {
     return;
   }
 
-  await offscreenManager.open();
+  await Promise.all([
+    chrome.scripting.executeScript({
+      target: { tabId },
+      files: ["scripts.bundle.js"],
+    }),
+    offscreenManager.open(),
+  ]);
 
-  let sentences: MsgIn["data"] = null;
+  let sentences: MsgInOffScr["data"] = null;
   let error: unknown = null;
 
   try {
-    const response = await chrome.runtime.sendMessage<MsgOut, MsgIn>({
+    const response = await chrome.runtime.sendMessage<MsgOutOffScr, MsgInOffScr>({
       type: PROCESS_DOC,
       data: pageContentResult,
     });
@@ -84,11 +97,10 @@ const onClicked = async (tab: chrome.tabs.Tab): Promise<void> => {
     return;
   }
 
-  const [[{ result: highlightCompleteResult }]] = await Promise.all([
-    chrome.scripting.executeScript({
-      target: { tabId },
-      func: highlightElements,
-      args: [sentences, HIGHLIGHT_PREFIX],
+  const [{ data: highlightCompleteResult }] = await Promise.all([
+    chrome.tabs.sendMessage<MsgOutScripts, MsgInScripts>(tabId, {
+      type: HIGHLIGHT,
+      data: sentences,
     }),
     chrome.scripting.insertCSS({
       target: { tabId },
