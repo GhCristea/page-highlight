@@ -5,7 +5,7 @@ import { Msg } from "./lib/types";
 import { isString } from "./lib";
 
 const OFFSCREEN_DOCUMENT_PATH = "/offscreen.html";
-const HIGHLIGHT_STYLE_ID = "page-highlight-styles";
+const HIGHLIGHT_LEVEL = "nlp-highlight";
 
 type MsgIn = Msg<typeof OFFSCREEN>;
 type MsgOut = Msg<typeof BACKGROUND>;
@@ -95,10 +95,13 @@ const onClicked = async (tab: chrome.tabs.Tab): Promise<void> => {
 
   const [{ result: isHighlighted }] = await chrome.scripting.executeScript({
     target: { tabId },
-    func: (highlightId) => {
-      return !!document.getElementById(highlightId);
+    func: (highlightLevel: string) => {
+      if (!CSS.highlights) {
+        throw new Error("CSS Custom Highlight API not supported in this browser");
+      }
+      return CSS.highlights.has(highlightLevel);
     },
-    args: [HIGHLIGHT_STYLE_ID],
+    args: [HIGHLIGHT_LEVEL],
   });
 
   if (isHighlighted) {
@@ -150,11 +153,18 @@ const onClicked = async (tab: chrome.tabs.Tab): Promise<void> => {
     return;
   }
 
-  const [{ result: highlightCompleteResult }] = await chrome.scripting.executeScript({
-    target: { tabId },
-    func: highlightElements,
-    args: [relevantTxt, HIGHLIGHT_STYLE_ID],
-  });
+  const [[{ result: highlightCompleteResult }]] = await Promise.all([
+    chrome.scripting.executeScript({
+      target: { tabId },
+      func: highlightElements,
+      args: [relevantTxt, HIGHLIGHT_LEVEL],
+    }),
+    chrome.scripting.insertCSS({
+      target: { tabId },
+      files: ["highlight.css"],
+      origin: "AUTHOR",
+    }),
+  ]);
 
   if (!Array.isArray(highlightCompleteResult)) {
     await updateBadge(tabId, "error", "Failed to highlight elements");

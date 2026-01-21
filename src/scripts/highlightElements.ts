@@ -1,4 +1,4 @@
-const highlightElements = (sentences: string[], styleId: string) => {
+const highlightElements = (sentences: string[], highlightLevel: string) => {
   const textTags =
     "abbr, acronym, address, blockquote, br, cite, code, dfn, div, em, h1, h2, h3, h4, h5, h6, kbd, p, pre, q, samp, span, strong, var";
   const textExtTags = "b, big, hr, i, small, sub, sup, tt";
@@ -7,22 +7,11 @@ const highlightElements = (sentences: string[], styleId: string) => {
   const structureTags = "body, head, html, title";
 
   try {
-    const style = document.createElement("style");
-    style.id = styleId;
-    style.textContent = `
-    ::highlight(nlp-highlight) {
-      background-color: rgba(255, 255, 0, 0.4);
-      color: inherit;
-      text-decoration: underline;
-      text-decoration-color: rgba(255, 200, 0, 0.6);
-      text-decoration-thickness: 2px;
+    if (!CSS.highlights) {
+      throw new Error("CSS Custom Highlight API not supported in this browser");
     }
-  `;
-    document.head.appendChild(style);
 
-    if (CSS.highlights) {
-      CSS.highlights.clear();
-    }
+    CSS.highlights.clear();
 
     const ranges: Range[] = [];
 
@@ -76,11 +65,9 @@ const highlightElements = (sentences: string[], styleId: string) => {
       });
     }
 
-    if (CSS.highlights && ranges.length > 0) {
+    if (ranges.length > 0) {
       const highlight = new Highlight(...ranges);
-      CSS.highlights.set("nlp-highlight", highlight);
-    } else if (!CSS.highlights) {
-      console.warn("CSS Custom Highlight API not supported in this browser");
+      CSS.highlights.set(highlightLevel, highlight);
     }
 
     return sentences;
