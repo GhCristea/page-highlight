@@ -1,8 +1,8 @@
-import getRelevantText from "./lib/getRelevantText";
-import { DocumentNoContentError, DocumentNotReadableError, isKnownError } from "./lib/errors";
-import { Msg, Payload } from "./lib/types";
-import { BACKGROUND, OFFSCREEN, PROCESS_DOC } from "./lib/constants";
-import { isString, objHasKeys, isError } from "./lib";
+import getRelevantText from "./getRelevantText";
+import { DocumentNoContentError, DocumentNotReadableError, isKnownError } from "../lib/errors";
+import { Msg, Payload } from "../lib/types";
+import { BACKGROUND, OFFSCREEN, PROCESS_DOC } from "../lib/constants";
+import { isString, objHasKeys, isError } from "../lib";
 import { isProbablyReaderable, Readability } from "@mozilla/readability";
 
 type MsgIn = Msg<typeof BACKGROUND>;
