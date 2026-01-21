@@ -8,5 +8,6 @@
   "permissions": ["activeTab", "scripting", "offscreen"],
   "background": {
     "service_worker": "service-worker.bundle.js"
-  }
+  },
+  "minimum_chrome_version": "105"
 }
